@@ -1,0 +1,4 @@
+# Ignore appsettings files
+.vs/
+appsettings.json
+appsettings.*.json
