@@ -1,11 +1,9 @@
-﻿namespace TaskManagementSystem.Models
+namespace TaskManagementSystem.Models;
+
+/// <summary>Bound from configuration section TaskManagementDB.</summary>
+public class TaskManagementDBSettings
 {
-    public class TaskManagementDBSettings
-    {
-        public string ConnectionString { get; set; } = null!;
-
-        public string DatabaseName { get; set; } = null!;
-
-        public string RoleCollectionName { get; set; } = null!;
-    }
+    public string ConnectionString { get; set; }
+    public string DatabaseName { get; set; }
+    public string RoleCollectionName { get; set; }
 }

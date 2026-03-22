@@ -1,215 +1,125 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using MongoDB.Bson;
-using MongoDB.Bson.Serialization.Attributes;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using TaskManagementSystem.Models;
+using TaskManagementSystem.Models.ViewModels;
 using TaskManagementSystem.Services;
-using static TaskManagementSystem.Services.TaskService;
-
 
 namespace TaskManagementSystem.Controllers;
 
+/// <summary>Task CRUD, status changes, and comment management.</summary>
 [ApiController]
 [Route("Api/[Controller]")]
-
-
+[Authorize(AuthenticationSchemes = "Bearer")]
 public class TaskController : ControllerBase
-
 {
     private readonly TaskService _taskService;
+
     public TaskController(TaskService taskService)
     {
         _taskService = taskService;
     }
 
-
+    /// <summary>Returns a single task by id.</summary>
     [HttpGet("{id:length(24)}")]
-    public async Task<Taskmo> Get(string id)
+    public async Task<TaskItem> Get(string id)
     {
-        //ObjectId Id = new ObjectId(AssignedTo);
-
-      
         return await _taskService.GetAsync(id);
-
-
     }
 
-
+    /// <summary>Returns a filtered, sorted, paginated list of tasks.</summary>
     [HttpGet]
-    public async Task<List<TaskResponse>> Get(int? status,string? AssignedBy,string? AssignedTo, string? AssignedToName,
-                                              string? orderBy,string? orderType, long? Page, long? PageSize,
-                                              DateTime? FromDeadline,DateTime? ToDeadline,string? SearchKey,string? SearchValue,
-                                              string? Key
-                                              )
+    public async Task<List<TaskResponse>> Get([FromQuery] TaskListQuery query)
     {
-        //ObjectId Id = new ObjectId(AssignedTo);
-
-        AssignedTos AssignedTos = new AssignedTos() { Id = AssignedTo, Name = AssignedToName };
-        return await _taskService.GetTasks(status, AssignedBy, AssignedTo, AssignedTos, orderBy, orderType, Page,
-                                      PageSize, FromDeadline, ToDeadline, SearchKey, SearchValue,Key);
-
-
+        var assignedTos = new AssignedTos { Id = query.AssignedTo, Name = query.AssignedToName };
+        return await _taskService.GetTasks(
+            query.Status,
+            query.AssignedBy,
+            query.AssignedTo,
+            assignedTos,
+            query.OrderBy,
+            query.OrderType,
+            query.Page,
+            query.PageSize,
+            query.FromDeadline,
+            query.ToDeadline,
+            query.SearchKey,
+            query.SearchValue,
+            query.Key);
     }
 
+    /// <summary>Creates a new task or updates an existing one.</summary>
     [HttpPost("CreateUpd")]
-    public async Task<IActionResult> CreateTask(Taskmo taskData)
+    public async Task<IActionResult> CreateTask(TaskItem taskData)
     {
-
-       // Console.WriteLine($"{taskData.Deadline}");
-        if(taskData.Id is null || taskData.Id == "")
+        if (taskData.Id is null || taskData.Id == "")
         {
-            int taskSt = await _taskService.CreateTask(taskData);
-
+            var taskSt = await _taskService.CreateTask(taskData);
             if (taskSt == 1)
                 return CreatedAtAction(nameof(Get), new { id = taskData.Id }, taskData);
-            else return Unauthorized("Access Denied");
+            return Unauthorized("Access Denied");
         }
 
-        else
-        {
-            var taskdata = await _taskService.UpdateAsync(taskData);
-            return Ok(taskdata);
-        }
-        
+        var taskdata = await _taskService.UpdateAsync(taskData);
+        return Ok(taskdata);
     }
 
-
-
-
-    [HttpPost("delete/{id:length(24)}")]
+    /// <summary>Soft-deletes a task by id.</summary>
+    [HttpPost("Delete/{id:length(24)}")]
     public async Task<IActionResult> Delete(string id)
     {
         var book = await _taskService.GetAsync(id);
-
         if (book is null)
-        {
             return NotFound();
-        }
 
         await _taskService.RemoveAsync(id);
-
         return NoContent();
     }
 
-
-
-
-    [HttpPost("status")]
-    public async Task<IActionResult> UpdateStatus([FromBody] changeStatus item)
+    /// <summary>Changes the status of a task and logs the activity.</summary>
+    [HttpPost("Status")]
+    public async Task<IActionResult> UpdateStatus([FromBody] TaskChangeStatusRequest item)
     {
-
         var task = await _taskService.GetAsync(item.Id);
-
         if (task is null)
-        {
             return NotFound();
-        }
 
-        //updatedTask.Id = task.Id;
-
-        await _taskService.ChangeStatusAsync(item.Id, item.newStatus,item.UserId);
-
+        await _taskService.ChangeStatusAsync(item.Id, item.NewStatus, item.UserId);
         return NoContent();
     }
 
-
-    [HttpPost("comment/{id:length(24)}")]
-    public async Task<IActionResult> CreateUpdComments(string Id, Comments comment)
+    /// <summary>Adds a comment to the specified task.</summary>
+    [HttpPost("Comment/{id:length(24)}")]
+    public async Task<IActionResult> CreateUpdComments(string id, Comments comment)
     {
-       
-
-        var task = await _taskService.GetAsync(Id);
-
+        var task = await _taskService.GetAsync(id);
         if (task is null)
-        {
             return NotFound();
-        }
 
-        //updatedTask.Id = task.Id;
-
-       
-        
-            Console.WriteLine("cid", comment.Id);
-           await _taskService.AddCommentToTask(Id, comment);
-        
-
-            
-
-        //else if ((comment.Id != null)){
-        //    await _taskService.UpdateComment(Id, comment.Id, comment);
-        //}
-
+        await _taskService.AddCommentToTask(id, comment);
         return NoContent();
     }
 
-
-
-    [HttpPost("comment/upd/{id:length(24)}")]
-    public async Task<IActionResult> UpdComments(string Id, Comments comment)
+    /// <summary>Updates an existing comment on the specified task.</summary>
+    [HttpPost("UpdateComment/{id:length(24)}")]
+    public async Task<IActionResult> UpdComments(string id, Comments comment)
     {
-
-
-        var task = await _taskService.GetAsync(Id);
-
+        var task = await _taskService.GetAsync(id);
         if (task is null)
-        {
             return NotFound();
-        }
 
-        //updatedTask.Id = task.Id;
-
-
-
-        Console.WriteLine("cid", comment.Id);
-        await _taskService.UpdateComment(Id, comment.Id, comment);
-
-
-
-        //else if ((comment.Id != null)){
-        //    await _taskService.UpdateComment(Id, comment.Id, comment);
-        //}
-
+        await _taskService.UpdateComment(id, comment.Id, comment);
         return NoContent();
     }
 
-
-
-    [HttpPost("comment/delete")]
-    public async Task<IActionResult> DeleteComment(ComDelete deleteParams)
+    /// <summary>Soft-deletes a specific comment from a task.</summary>
+    [HttpPost("DeleteComment/Delete")]
+    public async Task<IActionResult> DeleteComment(CommentDeleteRequest deleteParams)
     {
         var task = await _taskService.GetAsync(deleteParams.TaskId);
-
         if (task is null)
-        {
             return NotFound();
-        }
 
-        await _taskService.DeleteComment(deleteParams.TaskId,deleteParams.ComId);
-
+        await _taskService.DeleteComment(deleteParams.TaskId, deleteParams.CommentId);
         return NoContent();
     }
-
-
-
-    public class changeStatus
-    {
-        public string Id { get; set; } = null!;
-        public int newStatus { get; set; }
-        public string UserId { get; set; } = null!;
-    }
-
-
-    public class Assignedtos
-    {
-
-        public string Id { get; set; } = null!;
-        public string Name { get; set; } = null!;
-    }
-
-   public class ComDelete {
-        public string TaskId { get; set; } = null!;
-        public string ComId { get; set; } = null!;
-
-    }
-
-
 }

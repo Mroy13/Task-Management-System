@@ -1,42 +1,32 @@
-﻿using MongoDB.Bson;
+using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
-namespace TaskManagementSystem.Models
+namespace TaskManagementSystem.Models;
+
+/// <summary>Team document with leader and member object ids.</summary>
+public class Team
 {
-    public class Team
-    {
-        [BsonId]
-        [BsonRepresentation(BsonType.ObjectId)]
-        public string? Id { get; set; }
+    [BsonId]
+    [BsonRepresentation(BsonType.ObjectId)]
+    public string Id { get; set; }
 
-        public string TeamName { get; set; } = null!;
+    public string TeamName { get; set; }
 
-        [BsonRepresentation(BsonType.ObjectId)]
-        public string TeamLeader { get; set; } = null!;
+    [BsonRepresentation(BsonType.ObjectId)]
+    public string TeamLeader { get; set; }
 
-        public TeamLeader? TeamLeaderDetails { get; set; }
+    [BsonIgnoreIfNull]
+    public TeamLeader TeamLeaderDetails { get; set; }
 
-        public List<ObjectId> TeamMembers { get; set; } = null!;
+    public List<ObjectId> TeamMembers { get; set; }
 
-        //public List<string> TeamMembers { get; set; } = null!;
+    public bool? IsDelete { get; set; } = false;
+}
 
-        public bool? IsDelete { get; set; } = false;
-    }
-
-    // public class TeamMembers
-    //{
-    //    public string ? Id { get; set; }
-    //    public string ? Name { get; set; }
-
-
-    //}
-
-   public class TeamLeader
-    {
-        [BsonRepresentation(BsonType.ObjectId)]
-        public string Id { get; set; } = null!;
-        public string Name { get; set; } = null!;
-    }
-
-
+/// <summary>Embedded leader summary.</summary>
+public class TeamLeader
+{
+    [BsonRepresentation(BsonType.ObjectId)]
+    public string Id { get; set; }
+    public string Name { get; set; }
 }

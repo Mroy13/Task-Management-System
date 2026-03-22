@@ -1,113 +1,66 @@
-﻿using Microsoft.IdentityModel.Logging;
-using Microsoft.IdentityModel.Tokens;
-using Microsoft.IdentityModel.Tokens.Experimental;
-using System;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Microsoft.IdentityModel.Tokens;
+using TaskManagementSystem.Models;
 
+namespace TaskManagementSystem.Helper;
 
-
-namespace TaskManagementSystem.Helper
+/// <summary>
+/// Creates and signs JWT access and refresh tokens using settings from configuration (JWT:Key, issuer, audience).
+/// </summary>
+public class Jwthelper
 {
-    public class Jwthelper
+    private readonly IConfiguration _configuration;
+
+    public Jwthelper(IConfiguration configuration)
     {
-        private readonly IConfiguration _conFiguration;
+        _configuration = configuration;
+    }
 
-        public Jwthelper(IConfiguration configuration)
+    /// <summary>Builds an access token with user id, email, and role claims.</summary>
+    public string GenerateJwtToken(string userId, string email, UserRole role)
+    {
+        var issuer = _configuration["JWT:issuer"]!;
+        var audience = _configuration["JWT:audience"]!;
+
+        var claims = new List<Claim>
         {
-            _conFiguration = configuration;
-        }
-
-
-        public string GenerateJwtToken(string email)
-        {
-            var claims = new[]
-            {
-            new Claim(JwtRegisteredClaimNames.Sub, email),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            new(JwtRegisteredClaimNames.Sub, userId),
+            new(ClaimTypes.NameIdentifier, userId),
+            new(ClaimTypes.Email, email),
+            new(JwtRegisteredClaimNames.Email, email),
+            new(ClaimTypes.Role, role.ToString()),
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_conFiguration["JWT:Key"]!));
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["JWT:Key"]!));
+        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-            var token = new JwtSecurityToken(
-                issuer: "mroy13.com",
-                audience: "all.com",
-                claims: claims,
-                expires: DateTime.Now.AddMinutes(30),
-                signingCredentials: creds);
+        var token = new JwtSecurityToken(
+            issuer,
+            audience,
+            claims,
+            expires: DateTime.UtcNow.AddMinutes(30),
+            signingCredentials: creds);
 
-            return new JwtSecurityTokenHandler().WriteToken(token);
-        }
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
 
+    /// <summary>Opaque refresh token (no user claims).</summary>
+    public string GenerateJwtRefreshToken()
+    {
+        var issuer = _configuration["JWT:issuer"]!;
+        var audience = _configuration["JWT:audience"]!;
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["JWT:Key"]!));
+        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
+        var token = new JwtSecurityToken(
+            issuer,
+            audience,
+            expires: DateTime.UtcNow.AddMinutes(60),
+            signingCredentials: creds);
 
-        public string GenerateJwtRefreshToken()
-        {
-        //    var claims = new[]
-        //    {
-        //    new Claim(JwtRegisteredClaimNames.Sub, email),
-        //    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-        //};
-
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_conFiguration["JWT:Key"]!));
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-            var token = new JwtSecurityToken(
-                issuer: "mroy13.com",
-                audience: "all.com",
-                //claims: claims,
-                expires: DateTime.Now.AddMinutes(60),
-                signingCredentials: creds);
-
-            return new JwtSecurityTokenHandler().WriteToken(token);
-        }
-
-
-
-
-
-
-
-        public string? getJWTTokenClaim(string token)
-        {
-            try
-            {
-                var tokenHandler = new JwtSecurityTokenHandler();
-                var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_conFiguration["JWT:Key"]!));
-
-
-                //var securityToken = (JwtSecurityToken)tokenHandler.ReadToken(token);
-                //var claimValue = securityToken.Claims.FirstOrDefault(c => c.Type == "Sub")?.Value;
-                //return claimValue;
-
-                var validationParameters = new TokenValidationParameters
-                {
-                    ValidateIssuer = true,
-                    ValidIssuer = _conFiguration["JWT:issuer"],
-                    ValidateAudience = true,
-                    ValidAudience = _conFiguration["JWT:audience"],
-                    ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = key,
-                    ValidateLifetime = true,
-                    //ClockSkew = TimeSpan.FromMinutes(10)
-                };
-
-
-                var decryptData = tokenHandler.ValidateToken(token, validationParameters, out _);
-                
-                Console.WriteLine($"{decryptData}");
-                var email = decryptData?.FindFirst(JwtRegisteredClaimNames.Sub)?.Value ?? decryptData?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                return email;
-
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-        }
-
-
+        return new JwtSecurityTokenHandler().WriteToken(token);
     }
 }

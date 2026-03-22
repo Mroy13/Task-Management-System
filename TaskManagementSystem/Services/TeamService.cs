@@ -1,76 +1,12 @@
-﻿using MongoDB.Bson;
-using MongoDB.Bson.Serialization.Attributes;
+using MongoDB.Bson;
 using MongoDB.Driver;
-using System.Data;
 using TaskManagementSystem.Context;
 using TaskManagementSystem.Models;
+using TaskManagementSystem.Models.ViewModels;
 
-namespace TaskManagementSystem.Services
-{
+namespace TaskManagementSystem.Services;
 
-    public class TeamResponse
-    {
-        [BsonId]
-        [BsonRepresentation(BsonType.ObjectId)]
-        public string? Id { get; set; }
-
-        public string TeamName { get; set; } = null!;
-
-        //[BsonRepresentation(BsonType.ObjectId)]
-        public User[] TeamLeader { get; set; } = null!;
-
-        public TeamLeader? TeamLeaderDetails { get; set; }
-
-        public List<ObjectId> TeamMembers { get; set; } = null!;
-
-        public List<User> TeamMembersDetails { get; set; } = null!;
-
-        public long? TotalDocument { get; set; } = null!;
-
-        //public List<string> TeamMembers { get; set; } = null!;
-
-    }
-
-
-
-    public class TeamMemberResponse {
-        [BsonId]
-        [BsonRepresentation(BsonType.ObjectId)]
-        public string? Id { get; set; }
-
-        public string TeamName { get; set; } = null!;
-
-        [BsonRepresentation(BsonType.ObjectId)]
-        public string TeamLeader { get; set; } = null!;
-
-        //public List<ObjectId> TeamMembers { get; set; } = null!;
-
-        public List<User> TeamMembers { get; set; } = null!;
-    }
-
-
-
-    public class TeamData
-    {
-        [BsonId]
-        [BsonRepresentation(BsonType.ObjectId)]
-        public string? Id { get; set; }
-
-        public string TeamName { get; set; } = null!;
-
-        [BsonRepresentation(BsonType.ObjectId)]
-        public string TeamLeader { get; set; } = null!;
-
-        //public List<ObjectId> TeamMembers { get; set; } = null!;
-
-        public TeamLeader? TeamLeaderDetails { get; set; }
-        public List<string> TeamMembers { get; set; } = null!;
-
-        public bool? IsDelete { get; set; } = false;
-    }
-
-
-
+    /// <summary>Team CRUD, member assignment, and aggregation queries.</summary>
     public class TeamService
     {
         private readonly IMongoCollection<Team> _teamCollection;
@@ -85,7 +21,8 @@ namespace TaskManagementSystem.Services
 
 
 
-        public async Task<Team?> GetAsync(string id)
+        /// <summary>Retrieves a single team by id.</summary>
+        public async Task<Team> GetAsync(string id)
         {
             var team = await _teamCollection.Find(x => x.Id == id).FirstOrDefaultAsync();
             return team;
@@ -96,7 +33,8 @@ namespace TaskManagementSystem.Services
 
 
 
-        public async Task<List<TeamResponse>> GetTeams(string? orderBy,string? orderType, string? SearchKey, string? SearchValue,string? key,long? page,long? pageSize)
+        /// <summary>Returns a filtered, sorted, paginated list of teams with user lookups.</summary>
+        public async Task<List<TeamResponse>> GetTeams(string orderBy, string orderType, string SearchKey, string SearchValue, string key, long? page, long? pageSize)
         {
             IAggregateFluent<TeamResponse> pipeline;
             var sortDefinition = Builders<TeamResponse>.Sort.Combine();
@@ -384,8 +322,4 @@ namespace TaskManagementSystem.Services
             var update = Builders<Team>.Update.Set("IsDelete", true);
             await _teamCollection.UpdateOneAsync(filter, update);
         }
-
-
-
-    }
 }
