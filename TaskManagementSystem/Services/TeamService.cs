@@ -6,7 +6,9 @@ using TaskManagementSystem.Models.ViewModels;
 
 namespace TaskManagementSystem.Services;
 
-/// <summary>Team CRUD, member assignment, and aggregation queries.</summary>
+/// <summary>
+/// Team CRUD, member assignment, 
+/// and aggregation queries.</summary>
 public class TeamService
 {
     private readonly IMongoCollection<Team> _teamCollection;
